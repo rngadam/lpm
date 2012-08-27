@@ -31,12 +31,11 @@ var read_package = function(file) {
 };
 
 var load_packages = function(dir) {
-	var entries = fs.readdirSync(dir);
-	var candidates = _.map(entries, generate_candidates.bind(this, dir));
-	var stats = _.map(candidates, fs.statSync);
-	var candidates_stats = _.zip(candidates, stats);
-
-	var packages = _.chain(candidates_stats)
+	var candidates; // temporary variable to zip candidates and stat file
+	var packages = _.chain(
+			_.zip(
+				candidates = _.map(fs.readdirSync(dir), generate_candidates.bind(this, dir)), 
+				_.map(candidates, fs.statSync)))
 		.filter(function(candidate_stat) {return candidate_stat[1].isFile();})
 		.pluck("0")
 		.map(read_package)
