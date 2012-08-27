@@ -34,7 +34,7 @@ var read_package = function(file) {
 	} catch(e) {
 		if(e.code == 'ENOENT')
 			return null;	
-		throw "Uncaught error!";
+		throw "Uncaught error: " + e;
 	}
 	
 };
@@ -44,38 +44,36 @@ var prepostfix = function(dir, filename, subdir) {
 };
 
 var postfix = function(value, dir) {
-	console.log(arguments);
 	var dir = path.dirname(dir);
 	return path.join(dir, value); 	
 };
 
-var load_packages = function(dir) {
+var load_packages = function(store_package, dir) {
 	try {
-		var packages = _.chain(fs.readdirSync(dir))
+		_.chain(fs.readdirSync(dir))
 				.map(prepostfix.bind(this, dir, 'package.json'))
 				.map(read_package)
 				.filter(function(v) {return v;})
-				.value();
-		return packages;
+				.map(store_package)
+				.pluck('location')
+				.map(postfix.bind(this, 'node_modules'))
+				.map(load_packages.bind(this, store_package))
+				.filter(function(v) {return v;});
 	} catch(e) {
 		if(e.code == 'ENOENT')
 			return null;	
-		throw "Uncaught error!";
+		throw "Uncaught error: " + e;
 	}
 }
 
-// var doNotExit = function (){
-//         return true;
-// };
-// setInterval(doNotExit, 500);
+var packages = [];
+var store_package = function(package_information) {
+	packages.push(package_information);
+	return package_information;
+};
 
-var packages = load_packages(dir);
+load_packages(store_package, dir);
 
-var output_packages = _.chain(packages)
-	.pluck('location')
-	.map(postfix.bind(this, 'node_modules'))
-	.map(load_packages)
-	.filter(function(v) {return v;})	
-	.value();
+console.log(_.pluck(packages, 'name'));
 
 console.log('finished!');
