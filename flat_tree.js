@@ -67,13 +67,19 @@ var load_packages = function(store_package, dir) {
 }
 
 var packages = [];
+var name_version_info = {};
 var store_package = function(package_information) {
 	packages.push(package_information);
+	if(name_version_info[package_information.name] === undefined) {
+		name_version_info[package_information.name] = {};		
+	}
+	if(name_version_info[package_information.name][package_information.version] === undefined) {
+		name_version_info[package_information.name][package_information.version] = [];		
+	}
+	name_version_info[package_information.name][package_information.version].push(package_information);
 	return package_information;
 };
 
 load_packages(store_package, dir);
-
-console.log(_.pluck(packages, 'name'));
 
 console.log('finished!');
