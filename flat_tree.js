@@ -27,21 +27,25 @@ var generate_candidates = function(dir, candidate_dir) {
 
 var read_package = function(file) {
 	console.log("reading " + file);
-	return JSON.parse(fs.readFileSync(file));
+	try {
+		var parsed = JSON.parse(fs.readFileSync(file));
+		parsed.location = file;
+		return parsed;
+	} catch(e) {
+		return null;	
+	}
+	
 };
 
 var load_packages = function(dir) {
 	var candidates; // temporary variable to zip candidates and stat file
-	var packages = _.chain(
-			_.zip(
-				candidates = _.map(fs.readdirSync(dir), generate_candidates.bind(this, dir)), 
-				_.map(candidates, fs.statSync)))
-		.filter(function(candidate_stat) {return candidate_stat[1].isFile();})
-		.pluck("0")
-		.map(read_package)
-		.value();
+	var packages = _.chain(fs.readdirSync(dir))
+			.map(generate_candidates.bind(this, dir))
+			.map(read_package)
+			.filter(function(v) {return v;})
+			.value();
 
-	console.log(packages);
+	console.log(_.pluck(packages, 'location'));
 }
 
 // var doNotExit = function (){
