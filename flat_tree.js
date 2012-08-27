@@ -20,7 +20,7 @@ var assert = require('assert');
 // }
 
 var dir = '/usr/lib/node_modules';
-var generate_candidates = function(candidate_dir) {
+var generate_candidates = function(dir, candidate_dir) {
 	assert.ok(dir);
 	return path.join(dir, path.join(candidate_dir, 'package.json'));
 };
@@ -32,14 +32,16 @@ var read_package = function(file) {
 
 var load_packages = function(dir) {
 	var entries = fs.readdirSync(dir);
-	var candidates = _.map(entries, generate_candidates);
+	var candidates = _.map(entries, generate_candidates.bind(this, dir));
 	var stats = _.map(candidates, fs.statSync);
 	var candidates_stats = _.zip(candidates, stats);
-	var valid_candidates =_.filter(candidates_stats, function(candidate_stat) {return candidate_stat[1].isFile();});
-	console.log(valid_candidates);
-	var filtered_candidates = _.pluck(valid_candidates, "0");
-	console.log(filtered_candidates);
-	var packages = filtered_candidates.map(read_package);
+
+	var packages = _.chain(candidates_stats)
+		.filter(function(candidate_stat) {return candidate_stat[1].isFile();})
+		.pluck("0")
+		.map(read_package)
+		.value();
+
 	console.log(packages);
 }
 
