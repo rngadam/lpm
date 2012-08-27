@@ -5,6 +5,7 @@ var fs = require("fs");
 var path = require("path");
 var _ = require('underscore');
 var assert = require('assert');
+
 // get all package.json as individual nodes in an array
 //	name, version, dependencies
 //	only when root has package.json and follow subdirectory node_modules
@@ -21,31 +22,46 @@ var assert = require('assert');
 
 var dir = '/usr/lib/node_modules';
 var generate_candidates = function(dir, candidate_dir) {
-	assert.ok(dir);
 	return path.join(dir, path.join(candidate_dir, 'package.json'));
 };
 
 var read_package = function(file) {
-	console.log("reading " + file);
 	try {
 		var parsed = JSON.parse(fs.readFileSync(file));
+		console.log("read " + file);
 		parsed.location = file;
 		return parsed;
 	} catch(e) {
-		return null;	
+		if(e.code == 'ENOENT')
+			return null;	
+		throw "Uncaught error!";
 	}
 	
 };
 
-var load_packages = function(dir) {
-	var candidates; // temporary variable to zip candidates and stat file
-	var packages = _.chain(fs.readdirSync(dir))
-			.map(generate_candidates.bind(this, dir))
-			.map(read_package)
-			.filter(function(v) {return v;})
-			.value();
+var prepostfix = function(dir, filename, subdir) { 
+	return path.join(dir, path.join(subdir, filename)); 
+};
 
-	console.log(_.pluck(packages, 'location'));
+var postfix = function(value, dir) {
+	console.log(arguments);
+	var dir = path.dirname(dir);
+	return path.join(dir, value); 	
+};
+
+var load_packages = function(dir) {
+	try {
+		var packages = _.chain(fs.readdirSync(dir))
+				.map(prepostfix.bind(this, dir, 'package.json'))
+				.map(read_package)
+				.filter(function(v) {return v;})
+				.value();
+		return packages;
+	} catch(e) {
+		if(e.code == 'ENOENT')
+			return null;	
+		throw "Uncaught error!";
+	}
 }
 
 // var doNotExit = function (){
@@ -53,5 +69,13 @@ var load_packages = function(dir) {
 // };
 // setInterval(doNotExit, 500);
 
-load_packages(dir);
+var packages = load_packages(dir);
+
+var output_packages = _.chain(packages)
+	.pluck('location')
+	.map(postfix.bind(this, 'node_modules'))
+	.map(load_packages)
+	.filter(function(v) {return v;})	
+	.value();
+
 console.log('finished!');
