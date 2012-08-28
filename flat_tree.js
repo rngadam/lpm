@@ -59,12 +59,12 @@ var load_packages = function(store_package, dir) {
 		_.chain(fs.readdirSync(dir))
 				.map(prepostfix.bind(null, dir, 'package.json'))
 				.map(read_package)
-				.filter(_.identity)
+				.compact()
 				.map(store_package)
 				.pluck('location')
 				.map(postfix.bind(null, 'node_modules'))
 				.map(load_packages.bind(this, store_package))
-				.filter(_.identity);
+				.compact()
 	} catch(e) {
 		if(e.code == 'ENOENT')
 			return null;	
@@ -108,5 +108,4 @@ var non_root = _.chain(packages)
 	.sortBy(function(v) {1.0/v;})
 	.map(move_packages.bind(null, dir));
 
-console.log(non_root);
 console.log('finished!');
