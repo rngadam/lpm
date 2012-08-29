@@ -15,7 +15,7 @@ var generate_candidates = function(dir, candidate_dir) {
 var read_package = function(file) {
 	try {
 		var parsed = JSON.parse(fs.readFileSync(file));
-		parsed = _.pick(parsed, ['name', 'dependencies', 'devDependencies', 'version']);
+		parsed = _.pick(parsed, ['name', 'dependencies', 'devDependencies', 'version', 'bin']);
 		console.log("read " + file);
 		parsed.location = path.dirname(file);
 		parsed.depth = file.split('/').length
@@ -52,7 +52,6 @@ var load_packages = function(store_package, dir) {
 				.pluck('location')
 				.map(postfix.bind(null, 'node_modules'))
 				.map(load_packages.bind(this, store_package))
-				.compact()
 	} catch(e) {
 		if(e.code == 'ENOENT')
 			return null;	
@@ -123,6 +122,31 @@ var link_dependencies = function(pkg_info) {
 		.map(link_dependency.bind(null, pkg_info.location))
 };
 
+var remove_extension = function(p) {
+	return p.slice(0, p.lastIndexOf(path.extname(p)));
+};
+
+var link_bin = function(target, pkg_info, bin) {
+	console.log('symlinking in ' + target + ' from '+ pkg_info.name + ' binary '+ bin)
+	var source = path.join(pkg_info.location, bin);
+	var symlink = remove_extension(path.join(target, path.basename(source)));
+	if(path.exists(symlink)) {
+		throw 'already exist: ' + symlink;
+	} else {
+		console.log('ln -s ' + source + ' ' + symlink);
+	}
+};
+
+var link_bins = function(target, pkg_info) {
+	if(pkg_info.bin instanceof Object) {
+		_.chain(pkg_info.bin)
+			.each(link_bin.bind(null, target, pkg_info));
+
+	} else {
+		link_bin(target, pkg_info, pkg_info.bin);
+	}
+};
+
 // recursive call
 load_packages(store_package, dir);
 
@@ -133,5 +157,9 @@ _.chain(packages)
 	.map(move_packages.bind(null, dir))
 	.flatten(true)
 	.map(link_dependencies);
+
+_.chain(packages) 
+	.filter(function(v) { return v['bin']; })
+	.map(link_bins.bind(null, '/usr/bin'));
 
 console.log('finished!');
