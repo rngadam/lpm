@@ -7,20 +7,6 @@ var _ = require('underscore');
 var assert = require('assert');
 var semver = require('semver');
 
-// get all package.json as individual nodes in an array
-//	name, version, dependencies
-//	only when root has package.json and follow subdirectory node_modules
-// build a tree of dependent -> dependencies
-// move leafs of tree to top-level (depth 0), replacing dependencies by symlinks
-
-//modules = findAllModules('/usr/lib/node_modules')
-
-// for(module in modules.keys()) {
-// 	for(dependency in module.dependencies) {
-// 		module.dependencies_link = modules[dependency.name];
-// 	}	
-// }
-
 var dir = '/usr/lib/node_modules';
 var generate_candidates = function(dir, candidate_dir) {
 	return path.join(dir, path.join(candidate_dir, 'package.json'));
@@ -50,10 +36,12 @@ var postfix = function(value, dir) {
 	return path.join(dir, value); 	
 };
 
-var dirname_eq = function(a, b) {
-	return a === b;
+var dirname_eq = function(dir, pkg_info) {
+	console.log('comparing ' + dir + ' to ' + pkg_info.location);
+	return dir === path.dirname(pkg_info.location);
 }
 
+// recursive call with function accumulator
 var load_packages = function(store_package, dir) {
 	try {
 		_.chain(fs.readdirSync(dir))
@@ -107,12 +95,12 @@ var store_package = function(pkg_info) {
 };
 
 var semver_satisfies = function(spec, pkg_info) {
-	console.log('checking if ' + spec + ' is satifisfied by ' + pkg_info.version);
+	console.log('checking if ' + spec + ' is satisfied by ' + pkg_info.version);
 	return semver.satisfies(pkg_info.version, spec);
 };
 
 var find_dependency = function(dep_ver, dep_name) {
-	console.log('looking up ' + dep_name + ' version ' + dep_ver);
+	//console.log('looking up ' + dep_name + ' version ' + dep_ver);
 	var pkg_info_list = name_version_info[dep_name]; 
 	return _.chain(pkg_info_list)
 		.values()
@@ -135,6 +123,7 @@ var link_dependencies = function(pkg_info) {
 		.map(link_dependency.bind(null, pkg_info.location))
 };
 
+// recursive call
 load_packages(store_package, dir);
 
 _.chain(packages)
